@@ -1,0 +1,20 @@
+services:
+    #
+    # Factory that is building Voting Process for objects
+    #
+    collectivevoting.factory:
+        class: CollectiveVotingBundle\Factory\VotingProcess\VotingProcessFactory
+        arguments:
+            em: "@doctrine.orm.entity_manager"
+            container: "@service_container"
+
+    #
+    # Constructs a proper describer
+    # That will be able to provide such information as
+    # "title" or route name with default parameters
+    # to be able to render link on frontend
+    #
+    collectivevoting.factory.describer:
+        class: CollectiveVotingBundle\Factory\DescriberFactory
+        arguments:
+            container: "@service_container"

@@ -1,0 +1,13 @@
+services:
+
+    #
+    # Formats VotingProcess to a nice frontend
+    # array that contains all information
+    #
+    collectivevoting.transformer.voting_process:
+        class: CollectiveVotingBundle\ViewTransformer\VotingProcessTransformer
+        arguments:
+            describerFactory: "@collectivevoting.factory.describer"
+            vpFactory: "@collectivevoting.factory"
+            router: "@router"
+            authChecker: "@security.authorization_checker"

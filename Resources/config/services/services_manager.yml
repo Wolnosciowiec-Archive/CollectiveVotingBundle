@@ -1,0 +1,10 @@
+services:
+    #
+    # Main layer: Manager
+    #
+    collectivevoting.manager:
+        class: CollectiveVotingBundle\Manager\VotingManager
+        arguments:
+            em: "@doctrine.orm.entity_manager"
+            factory: "@collectivevoting.factory"
+            decisionMaker: "@collectivevoting.decision_maker"

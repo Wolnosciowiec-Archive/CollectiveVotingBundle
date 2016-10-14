@@ -1,0 +1,38 @@
+CollectiveVotingBundle\Entity\Vote:
+    type: entity
+    repositoryClass: CollectiveVotingBundle\Repository\VoteRepository
+    table: cv_vote
+    id:
+        id:
+            type: integer
+            generator: { strategy: AUTO }
+
+    fields:
+        dateAdded:
+            column: date_added
+            type: datetimetz
+            nullable: false
+
+        voteOption:
+            column: vote_option
+            type: string
+            length: 24
+            nullable: false
+
+
+
+    manyToOne:
+        votingProcess:
+            targetEntity: CollectiveVotingBundle\Entity\VotingProcess
+            inversedBy: votes
+            joinColumn:
+                name: voting_process_id
+                referencedColumnName: id
+
+        voter:
+            targetEntity: Wolnosciowiec\AppBundle\Model\Entity\User
+            joinColumn:
+                name: voting_user_id
+                referencedColumnName: id
+
+
