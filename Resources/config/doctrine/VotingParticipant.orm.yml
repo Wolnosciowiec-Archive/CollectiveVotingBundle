@@ -1,0 +1,19 @@
+CollectiveVotingBundle\Entity\VotingParticipant:
+    type: entity
+    repositoryClass: CollectiveVotingBundle\Repository\VotingParticipant
+    table: cv_voting_participant
+    id:
+        id:
+            type: guid
+            unique: false
+            nullable: false
+            id: true
+            length: 36
+            generator:
+                strategy: UUID
+
+    fields:
+        username:
+            column: username
+            type: string
+            length: 40

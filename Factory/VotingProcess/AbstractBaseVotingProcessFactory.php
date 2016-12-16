@@ -2,10 +2,13 @@
 
 namespace CollectiveVotingBundle\Factory\VotingProcess;
 
+use CollectiveVotingBundle\DecisionMaker\Strategy\ChainedStrategy;
+use CollectiveVotingBundle\DecisionMaker\Strategy\MinimumVotesStrategy;
 use CollectiveVotingBundle\Entity\VotingProcess;
+use CollectiveVotingBundle\Model\DecisionMaker\DecisionMakerInterface;
 use CollectiveVotingBundle\Model\Entity\CollectiveVotingSubjectInterface;
+use CollectiveVotingBundle\Model\Entity\VotingParticipantInterface;
 use CollectiveVotingBundle\Model\Factory\VotingProcessEntityFactoryInterface;
-use Symfony\Component\Security\Core\User\UserInterface;
 use Doctrine\ORM\EntityManager;
 
 /**
@@ -51,27 +54,56 @@ class AbstractBaseVotingProcessFactory implements VotingProcessEntityFactoryInte
     }
 
     /**
+     * @param object $entity
+     * @return array
+     */
+    public function getOriginalEntityData($entity): array
+    {
+        return $this->em->getUnitOfWork()->getOriginalEntityData($entity);
+    }
+
+    /**
      * @param CollectiveVotingSubjectInterface $object
      * @return VotingProcess|null
      */
     public function constructProcess(CollectiveVotingSubjectInterface $object)
     {
-        return $this->em->getRepository('CollectiveVotingBundle:VotingProcess')->findOneBy([
+        return $this->em->getRepository(VotingProcess::class)->findOneBy([
             'subjectId'   => $object->getId(),
             'subjectType' => get_class($object),
         ]);
     }
 
     /**
+     * Return a strategy for this voting process type
+     *
+     * @return DecisionMakerInterface
+     */
+    public function constructStrategy(): DecisionMakerInterface
+    {
+        $strategy = new ChainedStrategy();
+
+        $strategy->addStrategy(
+            new MinimumVotesStrategy(1)
+        );
+
+        return $strategy;
+    }
+
+    /**
      * Create a new process
      *
      * @param CollectiveVotingSubjectInterface $object
-     * @param UserInterface $user
+     * @param VotingParticipantInterface $user
      * @param bool $persist
      *
      * @return VotingProcess|null
      */
-    public function createProcess(CollectiveVotingSubjectInterface $object, UserInterface $user, $persist = false)
+    public function createNewProcess(
+        CollectiveVotingSubjectInterface $object,
+        VotingParticipantInterface $user,
+        $persist = false
+    )
     {
         $process = new VotingProcess();
         $process->setSubjectType(get_class($object));

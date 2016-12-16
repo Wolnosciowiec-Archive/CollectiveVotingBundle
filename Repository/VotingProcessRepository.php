@@ -41,18 +41,16 @@ class VotingProcessRepository extends EntityRepository
             WHERE vote.votingProcess = :votingProcess'
         )->setParameter('votingProcess', $votingProcess);
 
-
-        // name boolean votes
-        $defaults = [
-            1 => 'votes_for',
-            0 => 'votes_against',
-        ];
-
         $votes = [];
 
         foreach ($query->getResult(Query::HYDRATE_ARRAY) as $result) {
-            $optionName = isset($defaults[$result]) ? $defaults[$result] : $result;
-            $votes[$optionName]++;
+            $option = $result['option'];
+
+            if (!isset($votes[$option])) {
+                $votes[$option] = [];
+            }
+
+            $votes[$option]++;
         }
 
         return $votes;
@@ -77,9 +75,7 @@ class VotingProcessRepository extends EntityRepository
         }
         else {
             $qb->setParameter('state', [
-                VotingProcess::STATE_CLOSED_APPROVED,
-                VotingProcess::STATE_CLOSED_DECLINED,
-                VotingProcess::STATE_CLOSED_CLOSED,
+                VotingProcess::STATE_CLOSED
             ]);
         }
 

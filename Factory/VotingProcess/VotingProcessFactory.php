@@ -3,6 +3,7 @@
 namespace CollectiveVotingBundle\Factory\VotingProcess;
 
 use CollectiveVotingBundle\Entity\VotingProcess;
+use CollectiveVotingBundle\Model\Entity\VotingParticipantInterface;
 use CollectiveVotingBundle\Model\Factory\VotingProcessEntityFactoryInterface;
 use CollectiveVotingBundle\Model\Entity\CollectiveVotingSubjectInterface;
 use Doctrine\ORM\EntityManager;
@@ -66,7 +67,7 @@ class VotingProcessFactory
      */
     public function getFactoryByName($name)
     {
-        $factory = $this->container->get('collectivevoting.factory.entity.' . $name);
+        $factory = $this->container->get('collectivevoting.factory.' . $name);
 
         if (!$factory instanceof VotingProcessEntityFactoryInterface) {
             throw new \Exception('Factory "' . $name . '" should implement VotingProcessEntityFactoryInterface');
@@ -88,6 +89,57 @@ class VotingProcessFactory
         return $this->getFactoryByName(
             $this->convertClassToPath($votingProcess->getSubjectType())
         );
+    }
+
+    /**
+     * @param string $processId
+     * @return VotingProcess|null
+     */
+    public function getProcessById($processId)
+    {
+        $process = $this->em->getRepository(VotingProcess::class)
+            ->find($processId);
+
+        if (!$process instanceof VotingProcess) {
+            return null;
+        }
+
+        $this->fillInTheStrategy($process);
+        return $process;
+    }
+
+    /**
+     * Get existing process or start a new one
+     *
+     * @param CollectiveVotingSubjectInterface $object
+     * @param VotingParticipantInterface       $contextUser
+     *
+     * @throws \Exception
+     * @return VotingProcess
+     */
+    public function getProcess($object, VotingParticipantInterface $contextUser)
+    {
+        $factory = $this->getEntityProcessFactory($object);
+        $process = $factory->constructProcess($object);
+
+        if (!$process instanceof VotingProcess) {
+            $process = $factory->createNewProcess($object, $contextUser, true);
+        }
+
+        $this->fillInTheStrategy($process);
+        return $process;
+    }
+
+    /**
+     * Fills up the strategy for every VotingProcess
+     *
+     * @param VotingProcess $process
+     */
+    private function fillInTheStrategy(VotingProcess $process)
+    {
+        // fill in the correct strategy
+        $strategy = $this->getProcessFactory($process)->constructStrategy();
+        $process->setDecisionStrategy($strategy);
     }
 
     /**

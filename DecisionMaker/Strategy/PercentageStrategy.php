@@ -6,26 +6,47 @@ use CollectiveVotingBundle\Entity\VotingProcess;
 use CollectiveVotingBundle\Model\DecisionMaker\DecisionMakerInterface;
 
 /**
- * PercentageStrategy
- * ==================
- *
  * @package CollectiveVotingBundle\DecisionMaker\Strategy
  */
-class PercentageStrategy implements DecisionMakerInterface
+class PercentageStrategy extends CommonStrategy implements DecisionMakerInterface
 {
+    /**
+     * @var int $maxPossibleVotesAmount
+     */
+    private $maxPossibleVotesAmount;
+
+    /**
+     * @var float $minimumVotesPercent
+     */
+    private $minimumVotesPercent;
+
+    /**
+     * @param int   $maxPossibleVotesAmount
+     * @param float $minimumVotesPercent
+     */
+    public function __construct(int $maxPossibleVotesAmount, float $minimumVotesPercent)
+    {
+        $this->maxPossibleVotesAmount = $maxPossibleVotesAmount;
+        $this->minimumVotesPercent    = $minimumVotesPercent;
+    }
+
     /**
      * @param VotingProcess $process
      * @param array $votesCount
      *
      * @return bool
      */
-    public function couldBeTaken(VotingProcess $process, $votesCount)
+    public function couldBeTaken(VotingProcess $process, array $votesCount)
     {
-        // minimum positive votes count
-        if ($votesCount['votes_for'] < 5) {
+        $finalOption = null;
+
+        try {
+            $finalOption = $this->getFinalOption($votesCount);
+        }
+        catch (AmbiguousResultException $e) {
             return false;
         }
 
-        return $votesCount['votes_for'] * 100 / ($votesCount['votes_for'] + $votesCount['votes_against']) >= 75;
+        return ($votesCount[$finalOption] / $this->maxPossibleVotesAmount) * 100 >= $this->minimumVotesPercent;
     }
 }

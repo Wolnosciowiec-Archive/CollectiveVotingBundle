@@ -18,19 +18,24 @@ CollectiveVotingBundle\Entity\Vote:
             type: string
             length: 24
             nullable: false
+        valid:
+            column: is_valid
+            type: boolean
+            options:
+                default: 1
 
 
 
     manyToOne:
         votingProcess:
-            targetEntity: CollectiveVotingBundle\Entity\VotingProcess
+            targetEntity: CollectiveVotingBundle\Model\Entity\VotingProcessInterface
             inversedBy: votes
             joinColumn:
                 name: voting_process_id
                 referencedColumnName: id
 
         voter:
-            targetEntity: Wolnosciowiec\AppBundle\Model\Entity\User
+            targetEntity: CollectiveVotingBundle\Model\Entity\VotingParticipantInterface
             joinColumn:
                 name: voting_user_id
                 referencedColumnName: id

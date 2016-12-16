@@ -2,6 +2,8 @@
 
 namespace CollectiveVotingBundle\Entity;
 
+use CollectiveVotingBundle\Model\DecisionMaker\DecisionMakerInterface;
+use CollectiveVotingBundle\Model\Entity\VotingParticipantInterface;
 use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Security\Core\User\UserInterface;
 
@@ -13,14 +15,8 @@ use Symfony\Component\Security\Core\User\UserInterface;
  */
 class VotingProcess
 {
-    const STATE_OPEN = 'open';
-
-    // boolean votings
-    const STATE_CLOSED_DECLINED = 'declined';
-    const STATE_CLOSED_APPROVED = 'approved';
-
-    // string option voting
-    const STATE_CLOSED_CLOSED   = 'closed';
+    const STATE_OPEN   = 'open';
+    const STATE_CLOSED = 'closed';
 
     /**
      * @var int $id
@@ -40,7 +36,7 @@ class VotingProcess
     /**
      * @var Vote[] $votes
      */
-    protected $votes;
+    protected $votes = [];
 
     /**
      * Current state the process is in
@@ -58,12 +54,27 @@ class VotingProcess
     protected $dateAdded;
 
     /**
+     * @var string|null $decisionStrategyName
+     */
+    protected $decisionStrategyName;
+
+    /**
      * @var UserInterface $startedByUser
      */
     protected $startedByUser;
 
     /**
-     * @return UserInterface
+     * @var DecisionMakerInterface|null $decisionStrategy
+     */
+    protected $decisionStrategy;
+
+    public function __construct()
+    {
+        $this->votes = new ArrayCollection();
+    }
+
+    /**
+     * @return VotingParticipantInterface
      */
     public function getStartedByUser()
     {
@@ -71,7 +82,7 @@ class VotingProcess
     }
 
     /**
-     * @param UserInterface $startedByUser
+     * @param VotingParticipantInterface $startedByUser
      * @return $this
      */
     public function setStartedByUser($startedByUser)
@@ -99,11 +110,26 @@ class VotingProcess
     }
 
     /**
-     * @return Vote[]
+     * @return Vote[]|ArrayCollection
      */
     public function getVotes()
     {
         return $this->votes;
+    }
+
+    /**
+     * @param Vote $vote
+     * @return $this
+     */
+    public function addVote(Vote $vote)
+    {
+        if (!$this->votes->contains($vote)) {
+            $this->votes->removeElement($vote);
+        }
+
+        $this->votes->add($vote);
+
+        return $this;
     }
 
     /**
@@ -170,10 +196,7 @@ class VotingProcess
      */
     public function isClosed()
     {
-        return in_array($this->state, [
-            self::STATE_CLOSED_APPROVED,
-            self::STATE_CLOSED_DECLINED,
-        ]);
+        return $this->state === self::STATE_CLOSED;
     }
 
     /**
@@ -191,13 +214,12 @@ class VotingProcess
     public function setState($state)
     {
         if (!in_array($state, [
-            self::STATE_CLOSED_DECLINED,
-            self::STATE_CLOSED_APPROVED,
+            self::STATE_CLOSED,
             self::STATE_OPEN,
         ]))
         {
             throw new \InvalidArgumentException('Invalid value for $state, values are defined '
-                . ' in class constants in prefix STATE_');
+                . ' in class constants in prefix STATE_, actual: ' . $state);
         }
 
         $this->state = $state;
@@ -210,37 +232,78 @@ class VotingProcess
     public function resetState()
     {
         $this->setState(self::STATE_OPEN);
+
+        foreach ($this->votes as $vote) {
+            $vote->setValid(false);
+        }
+
         return $this;
     }
 
     /**
      * Get votes count
      * ===============
-     *   votes_for: 1
-     *   votes_against: 2
-     *   summary: 3
+     *   vote_for: 1
+     *   vote_against: 2
+     *   my_option_name: 3
      *
      * @return array
      */
     public function getVotesCount()
     {
-        $votes = [
-            'votes_for'     => 0,
-            'votes_against' => 0,
-            'summary'       => 0,
-        ];
+        $votes = [];
 
         foreach ($this->getVotes() as $vote) {
-            if ($vote->getVoteOption() == '1') {
-                $votes['votes_for']++;
-            }
-            elseif ($vote->getVoteOption() == '0') {
-                $votes['votes_against']++;
+
+            if (!$vote->isValid()) {
+                continue;
             }
 
-            $votes['summary']++;
+            if (!isset($votes[$vote->getVoteOption()])) {
+                $votes[$vote->getVoteOption()] = 0;
+            }
+
+            $votes[$vote->getVoteOption()]++;
         }
 
         return $votes;
+    }
+
+    /**
+     * @param null|string $decisionStrategyName
+     * @return VotingProcess
+     */
+    public function setDecisionStrategyName($decisionStrategyName)
+    {
+        $this->decisionStrategyName = $decisionStrategyName;
+        return $this;
+    }
+
+    /**
+     * @return null|string
+     */
+    public function getDecisionStrategyName()
+    {
+        return $this->decisionStrategyName;
+    }
+
+    /**
+     * @return DecisionMakerInterface
+     */
+    public function getDecisionStrategy()
+    {
+        return $this->decisionStrategy;
+    }
+
+    /**
+     * Filled by the process factory
+     *
+     * @param DecisionMakerInterface|null $decisionStrategy
+     * @return VotingProcess
+     */
+    public function setDecisionStrategy($decisionStrategy)
+    {
+        $this->decisionStrategy = $decisionStrategy;
+        return $this;
     }
 }

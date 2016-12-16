@@ -36,14 +36,23 @@ CollectiveVotingBundle\Entity\VotingProcess:
             options:
                 default: "open"
 
+        decisionStrategyName:
+            column: decision_strategy_name
+            type: string
+            length: 32
+            nullable: true
+            options:
+                default: ""
+
     oneToMany:
         votes:
             targetEntity: CollectiveVotingBundle\Entity\Vote
             mappedBy: votingProcess
+            cascade: ["persist"]
 
     manyToOne:
         startedByUser:
-            targetEntity: Wolnosciowiec\AppBundle\Model\Entity\User
+            targetEntity: CollectiveVotingBundle\Model\Entity\VotingParticipantInterface
             joinColumn:
                 name: process_started_by_id
                 referencedColumnName: id

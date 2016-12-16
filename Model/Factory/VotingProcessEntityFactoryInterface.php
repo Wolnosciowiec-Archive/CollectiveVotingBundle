@@ -3,8 +3,9 @@
 namespace CollectiveVotingBundle\Model\Factory;
 
 use CollectiveVotingBundle\Entity\VotingProcess;
+use CollectiveVotingBundle\Model\DecisionMaker\DecisionMakerInterface;
 use CollectiveVotingBundle\Model\Entity\CollectiveVotingSubjectInterface;
-use Symfony\Component\Security\Core\User\UserInterface;
+use CollectiveVotingBundle\Model\Entity\VotingParticipantInterface;
 
 /**
  * VotingProcessEntityFactoryInterface
@@ -26,17 +27,34 @@ interface VotingProcessEntityFactoryInterface
     public function getSourceEntity(VotingProcess $vp);
 
     /**
+     * @param object $entity
+     * @return array
+     */
+    public function getOriginalEntityData($entity): array;
+
+    /**
      * @param CollectiveVotingSubjectInterface $object
      * @return VotingProcess
      */
     public function constructProcess(CollectiveVotingSubjectInterface $object);
 
     /**
+     * Return a strategy for this voting process type
+     *
+     * @return DecisionMakerInterface
+     */
+    public function constructStrategy(): DecisionMakerInterface;
+
+    /**
      * @param CollectiveVotingSubjectInterface $object
-     * @param UserInterface $user
+     * @param VotingParticipantInterface $user
      * @param bool $persist
      *
      * @return VotingProcess
      */
-    public function createProcess(CollectiveVotingSubjectInterface $object, UserInterface $user, $persist = false);
+    public function createNewProcess(
+        CollectiveVotingSubjectInterface $object,
+        VotingParticipantInterface $user,
+        $persist = false
+    );
 }

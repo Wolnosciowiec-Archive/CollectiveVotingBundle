@@ -17,5 +17,11 @@ interface DecisionMakerInterface
      *
      * @return bool
      */
-    public function couldBeTaken(VotingProcess $process, $votesCount);
+    public function couldBeTaken(VotingProcess $process, array $votesCount);
+
+    /**
+     * @param array         $votesCount
+     * @return mixed
+     */
+    public function getFinalOption($votesCount);
 }

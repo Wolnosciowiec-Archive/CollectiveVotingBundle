@@ -1,6 +1,7 @@
 <?php
 
 namespace CollectiveVotingBundle\Entity;
+use CollectiveVotingBundle\Model\Entity\VotingParticipantInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
@@ -13,6 +14,10 @@ use Symfony\Component\Security\Core\User\UserInterface;
  */
 class Vote
 {
+    const NAME_APPROVE   = 'vote_for';
+    const NAME_DECLINE   = 'vote_against';
+    const NAME_UNDECIDED = 'vote_abstain';
+
     /**
      * @var int $id
      */
@@ -39,6 +44,11 @@ class Vote
     protected $dateAdded;
 
     /**
+     * @var bool $valid
+     */
+    protected $valid = true;
+
+    /**
      * @return int
      */
     public function getId()
@@ -55,7 +65,7 @@ class Vote
     }
 
     /**
-     * @param UserInterface $voter
+     * @param VotingParticipantInterface $voter
      * @return $this
      */
     public function setVoter($voter)
@@ -116,5 +126,23 @@ class Vote
     {
         $this->dateAdded = $dateAdded;
         return $this;
+    }
+
+    /**
+     * @param boolean $valid
+     * @return Vote
+     */
+    public function setValid($valid)
+    {
+        $this->valid = $valid;
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function isValid()
+    {
+        return $this->valid;
     }
 }

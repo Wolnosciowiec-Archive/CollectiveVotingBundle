@@ -1,32 +1,21 @@
 <?php
 
-namespace CollectiveVotingBundle\Model\Processor;
+namespace CollectiveVotingBundle\Tests\Data;
 
 use CollectiveVotingBundle\Entity\VotingProcess;
 use CollectiveVotingBundle\Model\Entity\CollectiveVotingSubjectInterface;
+use CollectiveVotingBundle\Model\Entity\Tests\Subject;
+use CollectiveVotingBundle\Model\Processor\DecisionProcessorInterface;
 
 /**
- * DecisionProcessorInterface
- * ==========================
- *   Process decision eg. publish an article
- *
- * @package CollectiveVotingBundle\Model\Processor
+ * @package CollectiveVotingBundle\Tests\Data
  */
-interface DecisionProcessorInterface
+class SubjectProcessor implements DecisionProcessorInterface
 {
-    // reset process eg. after entity update
-    const DECISION_RESET_PROCESS = 1;
-
-    // entity update is allowed
-    const DECISION_UPDATE_PERMITTED = 2;
-
-    // positive decision
-    const DECISION_PROCESSED = 3;
-
     /**
      * @param VotingProcess $votingProcess
      * @param array $votesCount
-     * @param CollectiveVotingSubjectInterface $entity
+     * @param CollectiveVotingSubjectInterface|Subject $entity
      * @param array $originalEntityData
      * @param mixed $finalOption
      *
@@ -38,21 +27,22 @@ interface DecisionProcessorInterface
         CollectiveVotingSubjectInterface $entity,
         array $originalEntityData,
         $finalOption
-    ) : int;
+    ) : int
+    {
+        /** @var Subject $entity */
+        $entity->setApproved($finalOption === 'for');
+
+        return self::DECISION_PROCESSED;
+    }
 
     /**
-     * When decision could not be yet made
-     * but the state of the object could be
-     * for example restored if necessary
-     * ====================================
-     *
      * @param VotingProcess $votingProcess
      * @param array $votesCount
-     * @param CollectiveVotingSubjectInterface $entity
+     * @param CollectiveVotingSubjectInterface|Subject $entity
      * @param string $state
      * @param array $originalEntityData
      *
-     * @return int Returns the decision
+     * @return int
      */
     public function processNotReadyState(
         VotingProcess $votingProcess,
@@ -60,5 +50,13 @@ interface DecisionProcessorInterface
         CollectiveVotingSubjectInterface $entity,
         $state,
         array $originalEntityData
-    ) : int;
+    ) : int
+    {
+        if ($entity->isApproved()) {
+            $entity->setApproved(false);
+            return self::DECISION_RESET_PROCESS;
+        }
+
+        return self::DECISION_UPDATE_PERMITTED;
+    }
 }

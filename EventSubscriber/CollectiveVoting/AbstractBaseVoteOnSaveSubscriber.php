@@ -2,7 +2,8 @@
 
 namespace CollectiveVotingBundle\EventSubscriber\CollectiveVoting;
 
-use Wolnosciowiec\AppBundle\Event\EventDispatcher\AppEvent;
+use CollectiveVotingBundle\Entity\VotingProcess;
+use CollectiveVotingBundle\Model\Event\CollectiveVotingEventInterface;
 use CollectiveVotingBundle\Model\Entity\CollectiveVotingSubjectInterface;
 use CollectiveVotingBundle\Manager\VotingManager;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -37,6 +38,7 @@ abstract class AbstractBaseVoteOnSaveSubscriber implements EventSubscriberInterf
     /**
      * @param VotingManager $vm
      * @param AuthorizationChecker $checker
+     * @param EntityManager $em
      */
     public function __construct(VotingManager $vm, AuthorizationChecker $checker, EntityManager $em)
     {
@@ -58,10 +60,42 @@ abstract class AbstractBaseVoteOnSaveSubscriber implements EventSubscriberInterf
     abstract public function getPermissionName();
 
     /**
-     * @param AppEvent $event
+     * Get value that needs to be set when the voting will finish
+     *
+     * @param CollectiveVotingSubjectInterface $subject
+     * @return mixed
+     */
+    abstract public function getVotedOption($subject);
+
+    /**
+     * Could the voting proceed? Did'nt we cancel it?
+     *
+     * @param CollectiveVotingSubjectInterface $subject
      * @return bool
      */
-    public function prePersistCreateVoting(AppEvent $event)
+    abstract protected function isVotingSatisfied(CollectiveVotingSubjectInterface $subject): bool;
+
+    /**
+     * Constructs the process
+     * Could be used to inject the strategy
+     *
+     * @param CollectiveVotingSubjectInterface $subject
+     * @param CollectiveVotingEventInterface   $event
+     * @return VotingProcess
+     */
+    protected function createProcess(CollectiveVotingSubjectInterface $subject, CollectiveVotingEventInterface $event): VotingProcess
+    {
+        return $this->votingManager->getFactory()->getProcess(
+            $subject,
+            $event->getContextUser()
+        );
+    }
+
+    /**
+     * @param CollectiveVotingEventInterface $event
+     * @return bool
+     */
+    public function prePersistCreateVoting(CollectiveVotingEventInterface $event)
     {
         /** @var CollectiveVotingSubjectInterface $subject */
         $subject = $event->getSubject();
@@ -71,32 +105,49 @@ abstract class AbstractBaseVoteOnSaveSubscriber implements EventSubscriberInterf
             $this->em->flush($subject);
         }
 
-        // don't trigger the process if the post is not going to be published
-        if (!$subject->isVotingSatisfied()) {
-            return false;
-        }
-
-        // voting is off when:
-        // 1) we are not able to vote
-        // 2) we have a possibility to take action (eg. publish posts)
-
-        if ($this->getPermissionName()
-            && $this->authChecker->isGranted($this->getPermissionName(), $subject)) {
-            return false;
-        }
-
-        if (!$this->authChecker->isGranted('collectiveVote', $subject)) {
-            return false;
-        }
-
         // create voting process
-        $process = $this->votingManager->getProcess(
-            $subject,
-            $event->getContextUser()
-        );
+        $process = $this->createProcess($subject, $event);
 
-        // adds first vote
-        $this->votingManager->vote($process, $event->getContextUser(), true);
+        // if the user don't need to vote (the politics could be that for example
+        // only friends of an organization could vote)
+        if ($this->authChecker->isGranted('skipCollectiveVote', $subject)
+            && $subject->isVotingSatisfied()) {
+
+            $this->votingManager->finishWithOption(
+                $process,
+                $event->getContextUser(),
+                $this->getVotedOption($subject)
+            );
+
+            $event->setResultStatus(true);
+            return false;
+        }
+
+        // 1) don't trigger the process if the post is not going to be published
+        // case: when we uncheck that we want to publish the post for example
+        // 2) we have don't a possibility to take action (eg. publish posts)
+        // 3) we are not able to vote
+        $conditions = [
+            'isNotGoingToBeVoted' =>
+                !$this->isVotingSatisfied($subject),
+            'isUserNotAbleToVote' =>
+                $this->getPermissionName()
+                && !$this->authChecker->isGranted($this->getPermissionName(), $subject),
+            'isNotAbleToVoteGenerally' =>
+                !$this->authChecker->isGranted('collectiveVote', $subject),
+        ];
+
+        if ($conditions['isNotGoingToBeVoted']
+            || $conditions['isUserNotAbleToVote']
+            || $conditions['isNotAbleToVoteGenerally']) {
+
+            $this->votingManager->processDecision($process);
+            $this->votingManager->save($process);
+            return false;
+        }
+
+        // adds a vote
+        $this->votingManager->vote($process, $event->getContextUser(), $this->getVotedOption($subject));
         $event->setResultStatus(true);
 
         return true;

@@ -1,9 +1,10 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace CollectiveVotingBundle\DecisionMaker\Strategy;
 
 use CollectiveVotingBundle\Entity\VotingProcess;
 use CollectiveVotingBundle\Model\DecisionMaker\DecisionMakerInterface;
+use Wolnosciowiec\CollectiveVotingBundle\Model\Exception\AmbiguousResultException;
 
 /**
  * MinimumVotesStrategy
@@ -11,9 +12,20 @@ use CollectiveVotingBundle\Model\DecisionMaker\DecisionMakerInterface;
  *
  * @package CollectiveVotingBundle\DecisionMaker\Strategy
  */
-class MinimumVotesStrategy implements DecisionMakerInterface
+class MinimumVotesStrategy extends CommonStrategy implements DecisionMakerInterface
 {
-    const MINIMUM_VOTES = 3;
+    /**
+     * @var int $minimumVotesRequired
+     */
+    private $minimumVotesRequired = 3;
+
+    /**
+     * @param int $minimumVotesRequired
+     */
+    public function __construct(int $minimumVotesRequired)
+    {
+        $this->minimumVotesRequired = $minimumVotesRequired;
+    }
 
     /**
      * @param VotingProcess $process
@@ -21,13 +33,38 @@ class MinimumVotesStrategy implements DecisionMakerInterface
      *
      * @return bool
      */
-    public function couldBeTaken(VotingProcess $process, $votesCount)
+    public function couldBeTaken(VotingProcess $process, array $votesCount)
     {
-        if ($votesCount['votes_for'] === $votesCount['votes_against']) {
+        try {
+            $this->getFinalOption($votesCount);
+        } catch (AmbiguousResultException $e) {
             return false;
         }
 
-        return $votesCount['votes_for'] >= self::MINIMUM_VOTES
-                || $votesCount['votes_against'] >= self::MINIMUM_VOTES;
+        foreach ($votesCount as $count) {
+            if ((int)$count >= $this->getMinimumRequiredVotesAmount()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return int
+     */
+    protected function getMinimumRequiredVotesAmount()
+    {
+        return $this->minimumVotesRequired;
+    }
+
+    /**
+     * @param int $amount
+     * @return $this
+     */
+    public function setMinimumRequiredVotesAmount(int $amount)
+    {
+        $this->minimumVotesRequired = $amount;
+        return $this;
     }
 }
