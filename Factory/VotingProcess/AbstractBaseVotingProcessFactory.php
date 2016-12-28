@@ -68,11 +68,6 @@ class AbstractBaseVotingProcessFactory implements VotingProcessEntityFactoryInte
      */
     public function constructProcess(CollectiveVotingSubjectInterface $object)
     {
-        dump([
-            'subjectId'   => $object->getId(),
-            'subjectType' => get_class($object),
-        ]);
-
         return $this->em->getRepository(VotingProcess::class)->findOneBy([
             'subjectId'   => $object->getId(),
             'subjectType' => get_class($object),
@@ -110,9 +105,6 @@ class AbstractBaseVotingProcessFactory implements VotingProcessEntityFactoryInte
         $persist = false
     )
     {
-        dump('creation');
-        dump(get_class($object), $object->getId());
-
         $process = new VotingProcess();
         $process->setSubjectType(get_class($object));
         $process->setSubjectId($object->getId());
