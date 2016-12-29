@@ -15,7 +15,7 @@ CollectiveVotingBundle\Entity\VotingProcess:
         subjectType:
             column: subject_type
             type: string
-            length: 24
+            length: 128
             nullable: false
 
         dateAdded:
