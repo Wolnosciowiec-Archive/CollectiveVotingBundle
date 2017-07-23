@@ -12,7 +12,7 @@ interface CollectiveVotingEventInterface
     /**
      * @return VotingParticipantInterface
      */
-    public function getContextUser();
+    public function getUserExecutionContext();
 
     /**
      * @return CollectiveVotingSubjectInterface

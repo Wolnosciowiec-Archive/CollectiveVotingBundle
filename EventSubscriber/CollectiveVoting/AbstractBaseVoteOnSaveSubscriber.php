@@ -87,7 +87,7 @@ abstract class AbstractBaseVoteOnSaveSubscriber implements EventSubscriberInterf
     {
         return $this->votingManager->getFactory()->getProcess(
             $subject,
-            $event->getContextUser()
+            $event->getUserExecutionContext()
         );
     }
 
@@ -110,12 +110,12 @@ abstract class AbstractBaseVoteOnSaveSubscriber implements EventSubscriberInterf
 
         // if the user don't need to vote (the politics could be that for example
         // only friends of an organization could vote)
-        if ($this->authChecker->isGranted('skipCollectiveVote', $subject)
-            && $subject->isVotingSatisfied()) {
+        if (PHP_SAPI === 'cli' || ($this->authChecker->isGranted('skipCollectiveVote', $subject)
+            && $subject->isVotingSatisfied())) {
 
             $this->votingManager->finishWithOption(
                 $process,
-                $event->getContextUser(),
+                $event->getUserExecutionContext(),
                 $this->getVotedOption($subject)
             );
 
@@ -147,7 +147,7 @@ abstract class AbstractBaseVoteOnSaveSubscriber implements EventSubscriberInterf
         }
 
         // adds a vote
-        $this->votingManager->vote($process, $event->getContextUser(), $this->getVotedOption($subject));
+        $this->votingManager->vote($process, $event->getUserExecutionContext(), $this->getVotedOption($subject));
         $event->setResultStatus(true);
 
         return true;
